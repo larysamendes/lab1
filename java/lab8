@@ -1,0 +1,45 @@
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.*;
+
+public class ContadorPalavras {
+    public static void main(String[] args) {
+        System.out.println("Lab8");
+
+        if (args.length < 1) {
+            System.err.println("Usage: java ContadorPalavras file1 file2 ... fileN");
+            System.exit(1);
+        }
+
+        int numThreads = Runtime.getRuntime().availableProcessors();
+        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+        List<Future<Integer>> futures = new ArrayList<>();
+
+        for (String nomeArquivo : args) {
+            Future<Integer> future = executor.submit(() -> contarPalavras(nomeArquivo));
+            futures.add(future);
+        }
+
+        for (int i = 0; i < args.length; i++) {
+            try {
+                System.out.println(args[i] + " : " + futures.get(i).get() + " words");
+            } catch (InterruptedException | ExecutionException e) {
+                System.err.println("Error processing file " + args[i] + ": " + e.getMessage());
+            }
+        }
+
+        executor.shutdown();
+    }
+
+    static int contarPalavras(String nomeArquivo) throws IOException {
+        try (BufferedReader br = new BufferedReader(new FileReader(nomeArquivo))) {
+            int count = 0;
+            String linha;
+            while ((linha = br.readLine()) != null) {
+                count += linha.split("\\s+").length;
+            }
+            return count;
+        }
+    }
+}
