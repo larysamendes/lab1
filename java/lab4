@@ -1,0 +1,59 @@
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.*;
+
+public class Sum {
+
+    public static int sum(FileInputStream fis) throws IOException {
+        int byteRead;
+        int sum = 0;
+        
+        while ((byteRead = fis.read()) != -1) {
+            sum += byteRead;
+        }
+
+        return sum;
+    }
+
+    public static long sum(String path) throws IOException {
+        Path filePath = Paths.get(path);
+        if (Files.isRegularFile(filePath)) {
+            try (FileInputStream fis = new FileInputStream(filePath.toString())) {
+                return sum(fis);
+            }
+        } else {
+            throw new RuntimeException("Non-regular file: " + path);
+        }
+    }
+
+    public static void main(String[] args) {
+        if (args.length < 1) {
+            System.err.println("Usage: java Sum filepath1 filepath2 filepathN");
+            System.exit(1);
+        }
+
+        int numThreads = Runtime.getRuntime().availableProcessors();
+        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+        List<Future<Long>> futures = new ArrayList<>();
+
+        for (String path : args) {
+            Future<Long> future = executor.submit(() -> sum(path));
+            futures.add(future);
+        }
+
+        for (int i = 0; i < args.length; i++) {
+            try {
+                System.out.println(args[i] + " : " + futures.get(i).get());
+            } catch (InterruptedException | ExecutionException e) {
+                System.err.println("Error processing file " + args[i] + ": " + e.getMessage());
+            }
+        }
+
+        executor.shutdown();
+    }
+}
